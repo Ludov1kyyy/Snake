@@ -162,11 +162,10 @@ class State:
                 if event.key == pygame.K_ESCAPE:
                     pygame.quit()
                     exit()
-                if self.state == "open":
-                    if event.key == pygame.K_RETURN:
+                if event.key == pygame.K_RETURN:
+                    if self.state == "open":
                         self.state = "main"
-                if self.state == "over":
-                    if event.key == pygame.K_RETURN:
+                    if self.state == "over":
                         self.reset()
             if event.type == self.snake.MOVE:
                 self.snake.movement()
