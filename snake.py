@@ -121,8 +121,8 @@ class Apple:
 
     def get_pos(self):
         while True:
-            pos_x = randint(0, CELL_NUM - 1)
-            pos_y = randint(0, CELL_NUM - 1)
+            pos_x = int(randint(0, CELL_NUM - 1))
+            pos_y = int(randint(0, CELL_NUM - 1))
 
             if self.is_occupied((pos_x, pos_y)):
                 continue
