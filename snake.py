@@ -1,22 +1,27 @@
-# Snake by @Ludov1kyyyy
+# Snake Game by @Ludov1kyyyy :)
 
 import pygame
 from sys import exit
 from random import randint
 
-pygame.init()
-
-CELL_SIZE = CELL_NUM = 20
+CELL_SIZE = CELL_NUM = 24
 WINSIZE = CELL_SIZE * CELL_NUM
-FONT = pygame.font.Font(None, 30)
 
 BLACK_COLOR = (24, 24, 24)
 WHITE_COLOR = (200, 200, 200)
-GREEN_COLOR = (60, 239, 59)
+GREEN_COLOR = (59, 241, 60)
 RED_COLOR = (241, 79, 80)
 
+def grid(win):
+    for pos_x in range(0, WINSIZE, CELL_SIZE):
+        for pos_y in range(0, WINSIZE, CELL_SIZE):
+            block = pygame.Rect((pos_x, pos_y), (CELL_SIZE, CELL_SIZE))
+            pygame.draw.rect(win, BLACK_COLOR, block, 1)
+
 def display_text(info, pos, win, point="center"):
-    info_surf = FONT.render(str(info), True, WHITE_COLOR)
+    font = pygame.font.Font(None, 40)
+
+    info_surf = font.render(str(info), True, WHITE_COLOR)
     info_rect = info_surf.get_rect()
 
     if point == "topleft":
@@ -25,12 +30,6 @@ def display_text(info, pos, win, point="center"):
         info_rect.center = pos
 
     win.blit(info_surf, info_rect)
-
-def grid(win):
-    for pos_x in range(0, WINSIZE, CELL_SIZE):
-        for pos_y in range(0, WINSIZE, CELL_SIZE):
-            block = pygame.Rect((pos_x, pos_y), (CELL_SIZE, CELL_SIZE))
-            pygame.draw.rect(win, BLACK_COLOR, block, 1)
 
 class Block:
     def __init__(self, pos, color):
@@ -46,6 +45,7 @@ class Snake:
 
         self.move = pygame.math.Vector2()
         self.score = 0
+        self.grow = False
         self.dead = False
 
         self.MOVE = pygame.USEREVENT + 1
@@ -56,17 +56,17 @@ class Snake:
             if pos.x > CELL_NUM - 1:
                 pos.x = 0
             if pos.x < 0:
-                pos.x = CELL_NUM - 1
+                pos.x = CELL_NUM -1
             if pos.y > CELL_NUM - 1:
                 pos.y = 0
             if pos.y < 0:
-                pos.y = CELL_NUM - 1
+                pos.y = CELL_NUM -1
 
             pos_x = int(pos.x * CELL_SIZE)
             pos_y = int(pos.y * CELL_SIZE)
 
-            snake = Block((pos_x, pos_y), GREEN_COLOR)
-            win.blit(snake.image, snake.rect)
+            block = Block((pos_x, pos_y), GREEN_COLOR)
+            win.blit(block.image, block.rect)
 
     def input(self):
         key = pygame.key.get_pressed()
@@ -86,14 +86,16 @@ class Snake:
 
     def movement(self):
         if not self.dead and self.move:
-            body = self.body[:-1]
-            body.insert(0, body[0] + self.move)
-            self.body = body[:]
+            if not self.grow:
+                body_copy = self.body[:-1]
+            else:
+                body_copy = self.body[:]
+                self.grow = False
+            body_copy.insert(0, body_copy[0] + self.move)
+            self.body = body_copy[:]
 
-    def grow(self):
-        body = self.body[:]
-        body.insert(0, body[0] + self.move)
-        self.body = body[:]
+    def display_score(self, win):
+        display_text(f"Score: {self.score}", (5, 5), win, "topleft")
 
     def collision(self):
         for pos in self.body[1:]:
@@ -116,38 +118,40 @@ class Snake:
 class Apple:
     def __init__(self, snake):
         self.snake = snake
-        self.sprite = Block(self.get_pos(), RED_COLOR)
+        self.apple = Block(self.get_pos(), RED_COLOR)
 
     def draw(self, win):
-        win.blit(self.sprite.image, self.sprite.rect)
+        win.blit(self.apple.image, self.apple.rect)
 
     def get_pos(self):
         while True:
             pos_x = int(randint(0, CELL_NUM - 1))
             pos_y = int(randint(0, CELL_NUM - 1))
-
             if self.is_occupied((pos_x, pos_y)):
                 continue
             else:
                 return (pos_x * CELL_SIZE, pos_y * CELL_SIZE)
 
-    def is_occupied(self, sprite_pos):
+    def is_occupied(self, position):
         for pos in self.snake.body:
-            if sprite_pos == pos:
+            if position == pos:
                 return True
         return False
 
     def eaten(self):
-        if self.snake.body[0] * CELL_SIZE == self.sprite.rect.topleft:
+        if self.snake.body[0] * CELL_SIZE == self.apple.rect.topleft:
             self.reset_pos()
-            self.snake.grow()
             self.snake.score += 1
+            self.snake.grow = True
 
     def reset_pos(self):
-        self.sprite.rect.topleft = self.get_pos()
+        self.apple.rect.topleft = self.get_pos()
 
-class State:
+class Game:
     def __init__(self):
+        pygame.init()
+        self.win = pygame.display.set_mode((WINSIZE, WINSIZE))
+        pygame.display.set_caption("Snake")
         self.state = "open"
 
         self.snake = Snake()
@@ -166,62 +170,51 @@ class State:
                     if self.state == "open":
                         self.state = "main"
                     if self.state == "over":
-                        self.reset()
+                        self.snake.reset()
+                        self.apple.reset_pos()
+                        self.state = "main"
             if event.type == self.snake.MOVE:
                 self.snake.movement()
 
-    def open(self, win):
-        win.fill(BLACK_COLOR)
-        display_text("Press ENTER to play", (WINSIZE // 2, WINSIZE // 2), win)
+    def open(self):
+        self.win.fill(BLACK_COLOR)
+        display_text("Press ENTER to play again", (WINSIZE // 2, WINSIZE // 2), self.win)
 
-    def main(self, win):
+    def main(self):
         self.snake.update()
         self.apple.eaten()
-        
-        win.fill(BLACK_COLOR)
-        self.apple.draw(win)
-        self.snake.draw(win)
-        grid(win)
 
-        display_text(f"Score: {self.snake.score}", (5, 5), win, "topleft")
+        self.win.fill(BLACK_COLOR)
+        self.apple.draw(self.win)
+        self.snake.draw(self.win)
+        grid(self.win)
+        self.snake.display_score(self.win)
 
         if self.snake.dead:
             self.state = "over"
 
-    def over(self, win):
-        win.fill(BLACK_COLOR)
-        self.apple.draw(win)
-        self.snake.draw(win)
-        grid(win)
+    def over(self):
+        self.win.fill(BLACK_COLOR)
+        self.apple.draw(self.win)
+        self.snake.draw(self.win)
+        grid(self.win)
+        display_text("You Lost!", (WINSIZE // 2, WINSIZE // 2 - 40), self.win)
+        display_text(f"Score: {self.snake.score}", (WINSIZE // 2, WINSIZE // 2), self.win)
+        display_text("Press ENTER to play again", (WINSIZE // 2, WINSIZE // 2 + 40), self.win)
 
-        display_text("You Lost!", (WINSIZE // 2, WINSIZE // 2 - 30), win)
-        display_text(f"Score: {self.snake.score}", (WINSIZE // 2, WINSIZE // 2), win)
-        display_text("Press ENTER to play again", (WINSIZE // 2, WINSIZE // 2 + 30), win)
-
-    def reset(self):
-        self.snake.reset()
-        self.apple.reset_pos()
-        self.state = "main"
-
-    def run(self, win):
+    def game_state(self):
         self.event()
-
+        
         if self.state == "open":
-            self.open(win)
+            self.open()
         if self.state == "main":
-            self.main(win)
+            self.main()
         if self.state == "over":
-            self.over(win)
-
-class Game:
-    def __init__(self):
-        self.win = pygame.display.set_mode((WINSIZE, WINSIZE))
-        pygame.display.set_caption("Snake")
-        self.state = State()
+            self.over()
 
     def run(self):
         while True:
-            self.state.run(self.win)
+            self.game_state()
             pygame.display.update()
 
 game = Game()
