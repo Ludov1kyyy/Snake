@@ -178,7 +178,7 @@ class Game:
 
     def open(self):
         self.win.fill(BLACK_COLOR)
-        display_text("Press ENTER to play again", (WINSIZE // 2, WINSIZE // 2), self.win)
+        display_text("Press ENTER to play", (WINSIZE // 2, WINSIZE // 2), self.win)
 
     def main(self):
         self.snake.update()
